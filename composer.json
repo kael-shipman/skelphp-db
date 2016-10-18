@@ -1,0 +1,21 @@
+{
+  "name" : "skel/db",
+  "description" : "A basic implementation of a Database class, inspired by Android's Db Helper concept",
+  "type" : "library",
+  "keywords" : ["db", "database"],
+  "license" : "GPL3",
+  "authors" : [
+    {
+      "name" : "Kael Shipman",
+      "email" : "kael.shipman@gmail.com",
+      "homepage" : "https://colors.kaelshipman.me",
+      "role" : "Developer"
+    }
+  ],
+  "require" : {
+    "php" : ">=5.4"
+  },
+  "require-dev" : {
+    "phpunit/phpunit" : "~5"
+  }
+}
