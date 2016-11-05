@@ -29,10 +29,10 @@ abstract class Db implements Interfaces\Db {
 
   protected function initializeDatabase() {
     try {
-      $stm = $this->db->prepare('SELECT "version" FROM "'.static::FRAMEWORK_TABLE.'" WHERE "schemaName" = ? ORDER BY "version" DESC LIMIT 1');
-      $this->runningVersion = $stm->execute(static::SCHEMA_NAME)->fetchColumn(0); 
+      ($stm = $this->db->prepare('SELECT "version" FROM "'.static::FRAMEWORK_TABLE.'" WHERE "schemaName" = ? ORDER BY "version" DESC LIMIT 1'))->execute(array(static::SCHEMA_NAME));
+      $this->runningVersion = $stm->fetchColumn(0); 
       if ($this->runningVersion === false) $this->__registerVersionChange(0);
-    } catch (\Exception $e) {
+    } catch (\PDOException $e) {
       // If the query failed, then the database has probably not been initialized yet
       $this->db->exec('CREATE TABLE "'.static::FRAMEWORK_TABLE.'" ("id" INTEGER PRIMARY KEY, "schemaName" STRING NOT NULL, "version" INTEGER NOT NULL, "install_date" INTEGER NOT NULL)');
       $this->__registerVersionChange(0);
@@ -40,7 +40,7 @@ abstract class Db implements Interfaces\Db {
   }
 
   protected function __registerVersionChange(int $newVersion) {
-    $this->db->exec('INSERT INTO "'.static::FRAMEWORK_TABLE.'" ("schemaName", "install_date", "version") VALUES (\''.$this->db->escapeString(static::SCHEMA_NAME).'\', '.((new \DateTime())->getTimestamp()).', '.$newVersion.')');
+    $this->db->exec('INSERT INTO "'.static::FRAMEWORK_TABLE.'" ("schemaName", "install_date", "version") VALUES ('.$this->db->quote(static::SCHEMA_NAME).', '.((new \DateTime())->getTimestamp()).', '.$newVersion.')');
     $this->runningVersion = $newVersion;
   }
 
