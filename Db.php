@@ -29,32 +29,27 @@ abstract class Db implements Interfaces\Db {
 
   protected function initializeDatabase() {
     try {
-      ($stm = $this->db->prepare('SELECT "version" FROM "'.static::FRAMEWORK_TABLE.'" WHERE "schemaName" = ? ORDER BY "version" DESC LIMIT 1'))->execute(array(static::SCHEMA_NAME));
+      ($stm = $this->db->prepare('SELECT "targetVersion" FROM "'.static::FRAMEWORK_TABLE.'" WHERE "schemaName" = ? ORDER BY "installDate" DESC LIMIT 1'))->execute(array(static::SCHEMA_NAME));
       $this->runningVersion = $stm->fetchColumn(0); 
-      if ($this->runningVersion === false) $this->__registerVersionChange(0);
+      if ($this->runningVersion === false) $this->__registerVersionChange(0,0);
     } catch (\PDOException $e) {
       // If the query failed, then the database has probably not been initialized yet
-      $this->db->exec('CREATE TABLE "'.static::FRAMEWORK_TABLE.'" ("id" INTEGER PRIMARY KEY, "schemaName" STRING NOT NULL, "version" INTEGER NOT NULL, "install_date" INTEGER NOT NULL)');
-      $this->__registerVersionChange(0);
+      $this->db->exec('CREATE TABLE "'.static::FRAMEWORK_TABLE.'" ("id" INTEGER PRIMARY KEY, "schemaName" STRING NOT NULL, "targetVersion" INTEGER NOT NULL, "previousVersion" INTEGER NOT NULL, "installDate" INTEGER NOT NULL)');
+      $this->db->exec('CREATE INDEX "installed_versions_index" ON "'.static::FRAMEWORK_TABLE.'" ("installDate","targetVersion")');
+      $this->__registerVersionChange(0, 0);
     } 
   }
 
-  protected function __registerVersionChange(int $newVersion) {
-    $this->db->exec('INSERT INTO "'.static::FRAMEWORK_TABLE.'" ("schemaName", "install_date", "version") VALUES ('.$this->db->quote(static::SCHEMA_NAME).', '.((new \DateTime())->getTimestamp()).', '.$newVersion.')');
+  protected function __registerVersionChange(int $newVersion, int $oldVersion) {
+    $this->db->exec('INSERT INTO "'.static::FRAMEWORK_TABLE.'" ("schemaName", "installDate", "targetVersion", "previousVersion") VALUES ('.$this->db->quote(static::SCHEMA_NAME).', '.((new \DateTime())->getTimestamp()).', '.$newVersion.', '.$oldVersion.')');
     $this->runningVersion = $newVersion;
   }
 
   protected function __syncDatabase() {
     $this->db->beginTransaction();
-    $v = $this->runningVersion;
-    for ($v; $v < static::VERSION; $v++) {
-      $this->upgradeDatabase($v+1, $v);
-      $this->__registerVersionChange($v+1);
-    }
-    for ($v; $v > static::VERSION; $v--) {
-      $this->downgradeDatabase($v-1, $v);
-      $this->__registerVersionChange($v-1);
-    }
+    if ($this->runningVersion < static::VERSION) $this->upgradeDatabase(static::VERSION, $this->runningVersion);
+    else $this->downgradeDatabase(static::VERSION, $this->runningVersion);
+    $this->__registerVersionChange(static::VERSION, $this->runningVersion);
     $this->db->commit();
   }
 
