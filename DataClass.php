@@ -27,6 +27,7 @@ abstract class DataClass extends Component implements Interfaces\DataClass, Inte
       if (!array_key_exists($field, $data)) continue;
       $this->set($field, $this->convertDataToField($field, $data[$field]), false);
     }
+    return $this;
   }
 
   public static function restoreFromData(array $data) {
@@ -54,6 +55,14 @@ abstract class DataClass extends Component implements Interfaces\DataClass, Inte
 
   public function get($field) {
     return $this->convertDataToField($field, $this->elements[$field]);
+  }
+
+  public function getData() {
+    $data = array();
+    foreach($this->getDefinedFields() as $field) {
+      $data[$field] = $this->getRaw($field);
+    }
+    return $data;
   }
 
   public function getRaw($field) {
