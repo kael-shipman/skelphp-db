@@ -72,7 +72,7 @@ abstract class Db implements Interfaces\Db {
     foreach($obj as $k => $v) {
       if ($v instanceof Interfaces\DataCollection) $this->deleteAssociatedCollection($obj, $v);
     }
-    $this->db->prepare('DELETE FROM "'.$obj::TABLE_NAME.'" WHERE "'.$obj::PRIMARY_KEY.'" = ?')->exec(array($obj[$obj::PRIMARY_KEY]));
+    $this->db->prepare('DELETE FROM "'.$obj::TABLE_NAME.'" WHERE "'.$obj::PRIMARY_KEY.'" = ?')->execute(array($obj[$obj::PRIMARY_KEY]));
     $this->db->commit();
   }
 
@@ -91,7 +91,7 @@ abstract class Db implements Interfaces\Db {
     if (($errcount = $obj->numErrors()) > 0) throw new InvalidDataObjectException("You have $errcount errors to fix: ".implode("; ", $obj->getErrors()).";");
 
     $primaryFields = $this->getPrimaryChanges($obj);
-    if (count($primaryFields > 0)) {
+    if (count($primaryFields) > 0) {
       if ($id = $obj['id']) {
         $stm = $this->db->prepare('UPDATE "'.$obj::TABLE_NAME.'" SET "'.implode('" = ?, "', array_keys($primaryFields)).'" = ? WHERE "id" = ?');
         $stm->execute(array_merge(array_values($primaryFields), array($id)));
