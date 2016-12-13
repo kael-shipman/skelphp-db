@@ -3,6 +3,7 @@ namespace Skel;
 
 abstract class DataClass extends Component implements Interfaces\DataClass, Interfaces\DefinedComponent, Interfaces\ErrorHandler {
   use ErrorHandlerTrait;
+  use ObservableTrait;
 
   const TABLE_NAME = null;
   const PRIMARY_KEY = 'id';
@@ -17,9 +18,9 @@ abstract class DataClass extends Component implements Interfaces\DataClass, Inte
 
   // Constructors
   public function __construct(array $elements=array(), Interfaces\Template $t=null) {
-    parent::__construct($elements, $t);
     $this->addDefinedFields(array('id'));
     $this->set('id', null, true);
+    parent::__construct($elements, $t);
   }
 
   public function updateFromUserInput(array $data) {
@@ -87,7 +88,7 @@ abstract class DataClass extends Component implements Interfaces\DataClass, Inte
     $this->setBySystem[$field] = $setBySystem;
     $this->validateField($field);
 
-    if ($val != $prevVal || $newField) {
+    if ($field != 'id' && ($val != $prevVal || $newField)) {
       if (!array_key_exists($field, $this->changes)) $this->changes[$field] = array();
       $this->changes[$field][] = $prevVal;
       $this->notifyListeners('Change', array('field' => $field, 'prevVal' => $prevVal, 'newVal' => $val));

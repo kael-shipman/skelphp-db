@@ -1,7 +1,7 @@
 <?php
 namespace Skel;
 
-class DataCollection extends ComponentCollection {
+class DataCollection extends ComponentCollection implements Interfaces\DataCollection {
   /**
    * For something like pages to tags (m2m), this might be `pagesTags`. For something like cities to citizens (m2o), it might just be `people`.
    */

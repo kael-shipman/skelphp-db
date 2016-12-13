@@ -66,30 +66,35 @@ abstract class Db implements Interfaces\Db {
   // Data handling methods
   
   public function deleteObject(Interfaces\DataClass $obj) {
+    if ($obj[$obj::PRIMARY_KEY] === null) return;
+
     $this->db->beginTransaction();
     foreach($obj as $k => $v) {
-      if ($v instanceof Interfaces\DataCollection) 
+      if ($v instanceof Interfaces\DataCollection) $this->deleteAssociatedCollection($obj, $v);
+    }
+    $this->db->prepare('DELETE FROM "'.$obj::TABLE_NAME.'" WHERE "'.$obj::PRIMARY_KEY.'" = ?')->exec(array($obj[$obj::PRIMARY_KEY]));
+    $this->db->commit();
+  }
 
+  protected function getPrimaryChanges(Interfaces\DataClass $obj) {
+    $primaryFields = array();
+    foreach($obj as $field => $val) {
+      if ($obj->fieldIsDefined($field)) {
+        if ($obj->fieldHasChanged($field)) $primaryFields[$field] = $obj->getRaw($field);
+      }
+    }
+    return $primaryFields;
   }
 
   public function saveObject(Interfaces\DataClass $obj) {
     $obj->validateObject($this);
     if (($errcount = $obj->numErrors()) > 0) throw new InvalidDataObjectException("You have $errcount errors to fix: ".implode("; ", $obj->getErrors()).";");
 
-    $primaryFields = array();
-    $extraFields = array();
-    foreach($obj as $field => $val) {
-      if ($obj->fieldIsDefined($field)) {
-        if ($obj->fieldHasChanged($field)) $primaryFields[$field] = $obj->getRaw($field);
-      } else {
-        $extraFields[$field] = $obj->getRaw($field);
-      }
-    }
-
+    $primaryFields = $this->getPrimaryChanges($obj);
     if (count($primaryFields > 0)) {
       if ($id = $obj['id']) {
         $stm = $this->db->prepare('UPDATE "'.$obj::TABLE_NAME.'" SET "'.implode('" = ?, "', array_keys($primaryFields)).'" = ? WHERE "id" = ?');
-        $stm->execute(array_merge($primaryFields, array($id)));
+        $stm->execute(array_merge(array_values($primaryFields), array($id)));
       } else {
         $placeholders = array();
         for($i = 0; $i < count($primaryFields); $i++) $placeholders[] = '?';
@@ -101,14 +106,15 @@ abstract class Db implements Interfaces\Db {
       }
     }
 
-    foreach($extraChanges as $field => $value) {
-      if ($value instanceof Interfaces\DataCollection) $this->saveAssociatedCollection($obj, $value);
-      else $this->saveExtraField($obj, $field, $value);
-    }
+    $this->saveExtraFields($obj);
   }
 
-  protected function saveExtraField(Interfaces\DataClass $obj, string $field, $val) {
+  protected function saveExtraFields(Interfaces\DataClass $obj) {
     // This method can be overridden to handle saving of nonstandard fields
+    // By Default, we make sure all objects in associated collections are saved
+    foreach($obj as $field => $value) {
+      if ($value instanceof Interfaces\DataCollection) $this->saveAssociatedCollection($obj, $value);
+    }
   }
 
   /**
@@ -128,11 +134,11 @@ abstract class Db implements Interfaces\Db {
       ($collection->childTableName ? ' JOIN "'.$collection->childTableName.'" ON ("'.$collection->childTableName.'"."'.$childPk.'" = "'.$collection->linkTableName.'"."'.$collection->childLinkKey.'")' : '').
       ' WHERE "'.$collection->parentLinkKey.'" = ?';
     ($stm = $this->db->prepare($currentSelect))->execute(array($obj[$parentPk]));
-    $current = $stm->fetchAll(\PDO::FETCH_NUM);
+    $current = $stm->fetchAll(\PDO::FETCH_ASSOC);
 
     // Delete current items that are no longer associated
     foreach($current as $v) {
-      if (count($collection->filter($collection->childLinkKey, $v[$collection->childLinkKey])) == 0) {
+      if (!$collection->contains($collection->childLinkKey, $v[$collection->childLinkKey])) {
         if ($collection->childTableName) {
           $stm = 'DELETE FROM "'.$collection->linkTableName.'" WHERE "'.$collection->parentLinkKey.'" = ? and "'.$collection->childLinkKey.'" = ?';
           $args = array($v[$collection->parentLinkKey], $v[$collection->childLinkKey]);
@@ -156,14 +162,29 @@ abstract class Db implements Interfaces\Db {
       if ($found) continue;
 
       if ($collection->childTableName) {
-        $stm = 'INSERT INTO "'.$collection->linkTableName.'" ("'.$collection->childLinkKey.'", "'.$collection->parentLinkKey.'") VALUES (?, ?)');
+        $stm = 'INSERT INTO "'.$collection->linkTableName.'" ("'.$collection->childLinkKey.'", "'.$collection->parentLinkKey.'") VALUES (?, ?)';
         $args = array($v[$childPk], $obj[$parentPk]);
       } else {
         $stm = 'UPDATE "'.$collection->linkTableName.'" SET "'.$collection->parentLinkKey.'" = ? WHERE "'.$childPk.'" = ?';
         $args = array($obj[$parentPk], $v[$childPk]);
       }
       $this->db->prepare($stm)->execute($args);
-    } return true;
+    }
+    return true;
+  }
+
+  protected function deleteAssociatedCollection(Interfaces\DataClass $obj, Interfaces\DataCollection $collection) {
+    $childPk = $collection[0] ? $collection[0]::PRIMARY_KEY : 'id';
+    $parentPk = $obj::PRIMARY_KEY ?: 'id';
+    foreach ($collection as $v) {
+      if ($collection->childTableName) {
+        $stm = 'DELETE FROM "'.$collection->linkTableName.'" WHERE "'.$collection->childLinkKey.'" = ? and "'.$collection->parentLinkKey.'" = ?';
+        $this->db->prepare($stm)->execute(array($v[$childPk], $obj[$parentPk]));
+      } else {
+        $stm = 'UPDATE "'.$collection->linkTableName.'" SET "'.$collection->parentLinkKey.'" = null WHERE "'.$collection->childLinkKey.'" = ?';
+        $this->db->prepare($stm)->execute(array($v[$childPk]));
+      }
+    }
   }
 }
 
