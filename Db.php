@@ -8,6 +8,7 @@ abstract class Db implements Interfaces\Db {
   const SCHEMA_NAME = 'skel';
   const FRAMEWORK_TABLE = 'skel';
   protected $runningVersion;
+  protected $__cache = array();
 
   public function __construct(Interfaces\DbConfig $config) {
     $this->config = $config;
@@ -35,6 +36,9 @@ abstract class Db implements Interfaces\Db {
       $this->runningVersion = $stm->fetchColumn(0); 
       if ($this->runningVersion === false) $this->__registerVersionChange(0,0);
     } catch (\PDOException $e) {
+      // It might have failed for other reasons...
+      if (strpos($e->getMessage(), 'readonly') !== false) throw $e;
+
       // If the query failed, then the database has probably not been initialized yet
       $this->db->exec('CREATE TABLE "'.static::FRAMEWORK_TABLE.'" ("id" INTEGER PRIMARY KEY, "schemaName" STRING NOT NULL, "targetVersion" INTEGER NOT NULL, "previousVersion" INTEGER NOT NULL, "installDate" INTEGER NOT NULL)');
       $this->db->exec('CREATE INDEX "installed_versions_index" ON "'.static::FRAMEWORK_TABLE.'" ("installDate","targetVersion")');
@@ -185,6 +189,15 @@ abstract class Db implements Interfaces\Db {
         $this->db->prepare($stm)->execute(array($v[$childPk]));
       }
     }
+  }
+
+
+
+  protected function getCached(string $key) { return $this->__cache[$key]; }
+  protected function cacheValue(string $key, $val) { return $this->__cache[$key] = $val; }
+  protected function invalidateCache(string $key=null) {
+    if (!$key) $this->__cache = array();
+    else unset($this->__cache[$key]);
   }
 }
 
