@@ -1,8 +1,8 @@
 {
   "name" : "skel/db",
-  "description" : "A basic implementation of a Database class, inspired by Android's Db Helper concept",
+  "description" : "A basic implementation of a base class for a declarative database abstraction layer, inspired by Android's Db Helper concept.",
   "type" : "library",
-  "keywords" : ["db", "database"],
+  "keywords" : ["db", "database", "dbal", "database abstraction layer"],
   "license" : "GPL3",
   "authors" : [
     {
@@ -13,9 +13,18 @@
     }
   ],
   "require" : {
-    "php" : ">=5.4"
+    "php" : ">=5.3",
+    "skel/header" : "~0.0",
+    "skel/component" : "~0.0",
+    "skel/traits" : "~0.0",
+    "skel/uri" : "~0.0"
   },
   "require-dev" : {
     "phpunit/phpunit" : "~5"
+  },
+  "autoload" : {
+    "psr-4" : {
+      "Skel\\" : "src/"
+    }
   }
 }
