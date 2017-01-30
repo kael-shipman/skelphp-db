@@ -130,26 +130,26 @@ abstract class Db implements Interfaces\Db, Interfaces\Orm {
     foreach($collection as $c) $this->saveObject($c);
     $childPk = $collection[0] ? $collection[0]::PRIMARY_KEY : 'id';
     $parentPk = $obj::PRIMARY_KEY ?: 'id';
-    if (!$collection->childLinkKey) $collection->childLinkKey = $childPk;
+    if (!$collection->getChildLinkKey()) $collection->setChildLinkKey($childPk);
 
-    if (!$collection->linkTableName || !$collection->parentLinkKey) throw new UnsaveableAssociatedCollectionException("Any DataCollection object that you wish to save must have at least a `linkTableName` and a `parentLinkKey`, and in the case of a many-to-many relationship, also a `childTableName`. These attributes should be set on the collection when it is converted from data to a collection and associated with a DataClass object. This usually happens in a Db object or derivative (like Cms).");
+    if (!$collection->getLinkTableName() || !$collection->getParentLinkKey()) throw new UnsaveableAssociatedCollectionException("Any DataCollection object that you wish to save must have at least a `linkTableName` and a `parentLinkKey`, and in the case of a many-to-many relationship, also a `childTableName`. These attributes should be set on the collection when it is converted from data to a collection and associated with a DataClass object. This usually happens in a Db object or derivative (like Cms).");
 
     // Get all items currently associated with the parent object
-    $currentSelect = 'SELECT * FROM "'.$collection->linkTableName.'"'.
-      ($collection->childTableName ? ' JOIN "'.$collection->childTableName.'" ON ("'.$collection->childTableName.'"."'.$childPk.'" = "'.$collection->linkTableName.'"."'.$collection->childLinkKey.'")' : '').
-      ' WHERE "'.$collection->parentLinkKey.'" = ?';
+    $currentSelect = 'SELECT * FROM "'.$collection->getLinkTableName().'"'.
+      ($collection->getChildTableName() ? ' JOIN "'.$collection->getChildTableName().'" ON ("'.$collection->getChildTableName().'"."'.$childPk.'" = "'.$collection->getLinkTableName().'"."'.$collection->getChildLinkKey().'")' : '').
+      ' WHERE "'.$collection->getParentLinkKey().'" = ?';
     ($stm = $this->db->prepare($currentSelect))->execute(array($obj[$parentPk]));
     $current = $stm->fetchAll(\PDO::FETCH_ASSOC);
 
     // Delete current items that are no longer associated
     foreach($current as $v) {
-      if (!$collection->contains($collection->childLinkKey, $v[$collection->childLinkKey])) {
-        if ($collection->childTableName) {
-          $stm = 'DELETE FROM "'.$collection->linkTableName.'" WHERE "'.$collection->parentLinkKey.'" = ? and "'.$collection->childLinkKey.'" = ?';
-          $args = array($v[$collection->parentLinkKey], $v[$collection->childLinkKey]);
+      if (!$collection->contains($collection->getChildLinkKey(), $v[$collection->getChildLinkKey()])) {
+        if ($collection->getChildTableName()) {
+          $stm = 'DELETE FROM "'.$collection->getLinkTableName().'" WHERE "'.$collection->getParentLinkKey().'" = ? and "'.$collection->getChildLinkKey().'" = ?';
+          $args = array($v[$collection->getParentLinkKey()], $v[$collection->getChildLinkKey()]);
         } else {
-          $stm = 'UPDATE "'.$collection->linkTableName.'" SET "'.$collection->parentLinkKey.'" = null WHERE "'.$collection->childLinkKey.'" = ?';
-          $args = array($v[$collection->childLinkKey]);
+          $stm = 'UPDATE "'.$collection->getLinkTableName().'" SET "'.$collection->getParentLinkKey().'" = null WHERE "'.$collection->getChildLinkKey().'" = ?';
+          $args = array($v[$collection->getChildLinkKey()]);
         }
         $this->db->prepare($stm)->execute($args);
       }
@@ -159,18 +159,18 @@ abstract class Db implements Interfaces\Db, Interfaces\Orm {
     foreach($collection as $v) {
       $found = false;
       foreach($current as $c) {
-        if ($c[$collection->childLinkKey] == $v[$childPk]) {
+        if ($c[$collection->getChildLinkKey()] == $v[$childPk]) {
           $found = true;
           break;
         }
       }
       if ($found) continue;
 
-      if ($collection->childTableName) {
-        $stm = 'INSERT INTO "'.$collection->linkTableName.'" ("'.$collection->childLinkKey.'", "'.$collection->parentLinkKey.'") VALUES (?, ?)';
+      if ($collection->getChildTableName()) {
+        $stm = 'INSERT INTO "'.$collection->getLinkTableName().'" ("'.$collection->getChildLinkKey().'", "'.$collection->getParentLinkKey().'") VALUES (?, ?)';
         $args = array($v[$childPk], $obj[$parentPk]);
       } else {
-        $stm = 'UPDATE "'.$collection->linkTableName.'" SET "'.$collection->parentLinkKey.'" = ? WHERE "'.$childPk.'" = ?';
+        $stm = 'UPDATE "'.$collection->getLinkTableName().'" SET "'.$collection->getParentLinkKey().'" = ? WHERE "'.$childPk.'" = ?';
         $args = array($obj[$parentPk], $v[$childPk]);
       }
       $this->db->prepare($stm)->execute($args);
@@ -182,11 +182,11 @@ abstract class Db implements Interfaces\Db, Interfaces\Orm {
     $childPk = $collection[0] ? $collection[0]::PRIMARY_KEY : 'id';
     $parentPk = $obj::PRIMARY_KEY ?: 'id';
     foreach ($collection as $v) {
-      if ($collection->childTableName) {
-        $stm = 'DELETE FROM "'.$collection->linkTableName.'" WHERE "'.$collection->childLinkKey.'" = ? and "'.$collection->parentLinkKey.'" = ?';
+      if ($collection->getChildTableName()) {
+        $stm = 'DELETE FROM "'.$collection->getLinkTableName().'" WHERE "'.$collection->getChildLinkKey().'" = ? and "'.$collection->getParentLinkKey().'" = ?';
         $this->db->prepare($stm)->execute(array($v[$childPk], $obj[$parentPk]));
       } else {
-        $stm = 'UPDATE "'.$collection->linkTableName.'" SET "'.$collection->parentLinkKey.'" = null WHERE "'.$collection->childLinkKey.'" = ?';
+        $stm = 'UPDATE "'.$collection->getLinkTableName().'" SET "'.$collection->getParentLinkKey().'" = null WHERE "'.$collection->getChildLinkKey().'" = ?';
         $this->db->prepare($stm)->execute(array($v[$childPk]));
       }
     }
