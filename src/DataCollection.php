@@ -2,25 +2,20 @@
 namespace Skel;
 
 class DataCollection extends ComponentCollection implements Interfaces\DataCollection {
-  /**
-   * For something like pages to tags (m2m), this might be `pagesTags`. For something like cities to citizens (m2o), it might just be `people`.
-   */
-  public $linkTableName;
+  protected $linkTableName;
+  protected $parentLinkKey;
+  protected $childTableName;
+  protected $childLinkKey;
 
-  /**
-   * When we're building a tags collection for a page, this would be `pageId`; for a list of the citizens in a given city, it would be `cityId`. It's the id column associated with the **parent** of the collection in the link table.
-   */
-  public $parentLinkKey;
+  public function getLinkTableName() { return $this->linkTableName; }
+  public function getParentLinkKey() { return $this->parentLinkKey; }
+  public function getChildTableName() { return $this->childTableName; }
+  public function getChildLinkKey() { return $this->childLinkKey; }
 
-  /**
-   * For the tags collection of a page, this would be `tags`; for the citizens of a city, it's not necessary, just leave it null.
-   */
-  public $childTableName;
-
-  /**
-   * For the tags of a page, `tagId`; for the citizens of a city, leave it blank.
-   */
-  public $childLinkKey;
+  public function setLinkTableName(string $name) { $this->linkTableName = $name; return $this; }
+  public function setParentLinkKey(string $name) { $this->parentLinkKey = $name; return $this; }
+  public function setChildTableName(string $name) { $this->childTableName = $name; return $this; }
+  public function setChildLinkKey(string $name) { $this->childLinkKey = $name; return $this; }
 
   public function indexOf(Interfaces\Component $c) {
     foreach($this as $k => $colComp) {

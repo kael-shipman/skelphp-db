@@ -1,7 +1,7 @@
 <?php
 namespace Skel;
 
-abstract class Db implements Interfaces\Db {
+abstract class Db implements Interfaces\Db, Interfaces\Orm {
   use ErrorHandlerTrait;
 
   const VERSION = 1;
@@ -12,6 +12,7 @@ abstract class Db implements Interfaces\Db {
 
   public function __construct(Interfaces\DbConfig $config) {
     $this->config = $config;
+    if (!($config->getDbPdo() instanceof \PDO)) throw new InvalidConfigException("`Config::getDbPdo` MUST return a valid PDO instance.");
     $this->db = $config->getDbPdo();
     $this->initializeDatabase();
     if ($this->runningVersion != static::VERSION) $this->__syncDatabase();

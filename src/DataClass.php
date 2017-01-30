@@ -1,7 +1,7 @@
 <?php
 namespace Skel;
 
-abstract class DataClass extends Component implements Interfaces\DataClass, Interfaces\DefinedComponent, Interfaces\ErrorHandler {
+abstract class DataClass extends Component implements Interfaces\DataClass {
   use ErrorHandlerTrait;
   use ObservableTrait;
 
@@ -66,7 +66,7 @@ abstract class DataClass extends Component implements Interfaces\DataClass, Inte
     return $data;
   }
 
-  public function getRaw($field) {
+  public function getRaw(string $field) {
     if ($this->elements[$field] instanceof Interfaces\DataClass) {
       $obj = $this->elements[$field];
       return $obj[$obj::PRIMARY_KEY];
