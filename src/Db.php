@@ -33,9 +33,10 @@ abstract class Db implements Interfaces\Db, Interfaces\Orm {
 
   protected function initializeDatabase() {
     try {
-      ($stm = $this->db->prepare('SELECT "targetVersion" FROM "'.static::FRAMEWORK_TABLE.'" WHERE "schemaName" = ? ORDER BY "installDate" DESC LIMIT 1'))->execute(array(static::SCHEMA_NAME));
+      ($stm = $this->db->prepare('SELECT "targetVersion" FROM "'.static::FRAMEWORK_TABLE.'" WHERE "schemaName" = ? ORDER BY "installDate" DESC, "targetVersion" DESC LIMIT 1'))->execute(array(static::SCHEMA_NAME));
       $this->runningVersion = $stm->fetchColumn(0); 
       if ($this->runningVersion === false) $this->__registerVersionChange(0,0);
+      else $this->runningVersion = (int)$this->runningVersion;
     } catch (\PDOException $e) {
       // It might have failed for other reasons...
       if (strpos($e->getMessage(), 'readonly') !== false) throw $e;
