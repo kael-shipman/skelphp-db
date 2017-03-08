@@ -9,11 +9,15 @@ abstract class Db implements Interfaces\Db, Interfaces\Orm {
   const FRAMEWORK_TABLE = 'skel';
   protected $runningVersion;
   protected $__cache = array();
+  protected $factory;
 
-  public function __construct(Interfaces\DbConfig $config) {
-    $this->config = $config;
-    if (!($config->getDbPdo() instanceof \PDO)) throw new InvalidConfigException("`Config::getDbPdo` MUST return a valid PDO instance.");
-    $this->db = $config->getDbPdo();
+  public function __construct(Interfaces\Factory $factory) {
+    if (!($factory instanceof Interfaces\UtilsFactory)) throw new \InvalidArgumentException("You must pass an instance of your own custom Factory class into `Db::constructor` that implements the interfaces for UtilFactory. If you're not sure how to do this, just go look at the various `*Factory` interfaces defined in the `skel/header` package and create a class that implements those methods."); 
+
+    $this->factory = $factory;
+    $this->config = $factory->getConfig();
+    if (!($this->config->getDbPdo() instanceof \PDO)) throw new InvalidConfigException("`Config::getDbPdo` MUST return a valid PDO instance.");
+    $this->db = $this->config->getDbPdo();
     $this->initializeDatabase();
     if ($this->runningVersion != static::VERSION) $this->__syncDatabase();
   }
@@ -21,7 +25,7 @@ abstract class Db implements Interfaces\Db, Interfaces\Orm {
   abstract protected function downgradeDatabase(int $targetVersion, int $fromVersion);
 
   protected function getContentDir() {
-    if (!$this->contentDir) $this->contentDir = new Uri('file://'.$this->config->getDbContentRoot());
+    if (!$this->contentDir) $this->contentDir = $this->factory->newUri('file://'.$this->config->getDbContentRoot());
     return $this->contentDir;
   }
 
