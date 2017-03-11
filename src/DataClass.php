@@ -31,6 +31,11 @@ abstract class DataClass extends Component implements Interfaces\DataClass {
     return $this;
   }
 
+  // alias to make this work with Factory class
+  public static function create(array $data) {
+    return static::restoreFromData($data);
+  }
+
   public static function restoreFromData(array $data) {
     if (array_key_exists('setBySystem', $data)) {
       $setBySystem = json_decode($data['setBySystem'], true);

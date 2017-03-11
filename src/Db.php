@@ -9,8 +9,12 @@ abstract class Db implements Interfaces\Db, Interfaces\Orm {
   const FRAMEWORK_TABLE = 'skel';
   protected $runningVersion;
   protected $__cache = array();
+  protected $strings;
+  protected $factory;
+  protected $context;
 
-  public function __construct(Interfaces\DbConfig $config) {
+  public function __construct(Interfaces\DbConfig $config, Interfaces\Factory $factory) {
+    $this->factory = $factory;
     $this->config = $config;
     if (!($config->getDbPdo() instanceof \PDO)) throw new InvalidConfigException("`Config::getDbPdo` MUST return a valid PDO instance.");
     $this->db = $config->getDbPdo();
@@ -21,13 +25,17 @@ abstract class Db implements Interfaces\Db, Interfaces\Orm {
   abstract protected function downgradeDatabase(int $targetVersion, int $fromVersion);
 
   protected function getContentDir() {
-    if (!$this->contentDir) $this->contentDir = new Uri('file://'.$this->config->getDbContentRoot());
+    if (!$this->contentDir) $this->contentDir = $this->factory->new('uri', null, 'file://'.$this->config->getContentRoot());
     return $this->contentDir;
   }
 
   public function getString(string $key, string $default='') { return $this->getStrings()[$key] ?: $default; }
   public function getStrings() {
-    if (!$this->strings) $this->strings = include $this->config->getDbContentRoot().'/strings.php';
+    if (!$this->strings) {
+      $url = $this->config->getContentRoot().'/strings.php';
+      $this->strings = include $url;
+      if (!is_array($this->strings)) throw new \RuntimeException("It appears as though the file `$url` is not returning an array of strings like it should. Please update this file to make it return an array.");
+    }
     return $this->strings;
   }
 
