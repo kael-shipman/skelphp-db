@@ -60,7 +60,8 @@ abstract class DataClass extends Component implements Interfaces\DataClass {
   // Data Handling
 
   public function get($field) {
-    return $this->convertDataToField($field, $this->elements[$field]);
+    $val = array_key_exists($field, $this->elements) ? $this->elements[$field] : null;
+    return $this->convertDataToField($field, $val);
   }
 
   public function getData() {
@@ -93,7 +94,7 @@ abstract class DataClass extends Component implements Interfaces\DataClass {
     $this->setBySystem[$field] = $setBySystem;
     $this->validateField($field);
 
-    if ($field != 'id' && ($val != $prevVal || $newField)) {
+    if ($field != 'id' && ($val !== $prevVal || $newField)) {
       if (!array_key_exists($field, $this->changes)) $this->changes[$field] = array();
       $this->changes[$field][] = $prevVal;
       $this->notifyListeners('Change', array('field' => $field, 'prevVal' => $prevVal, 'newVal' => $val));
@@ -121,7 +122,9 @@ abstract class DataClass extends Component implements Interfaces\DataClass {
       if (!array_key_exists($f, $this->elements)) $this->set($f, null, true);
     }
   }
-  public function fieldSetBySystem(string $field) { return (bool)$this->setBySystem[$field]; }
+  public function fieldSetBySystem(string $field) {
+      return array_key_exists($field, $this->setBySystem) ? (bool)$this->setBySystem[$field] : false;
+  }
   public function fieldHasChanged(string $field) { return array_key_exists($field, $this->changes); }
   public function fieldIsDefined(string $field) { return array_search($field, $this->definedFields) !== false; }
   public function getChanges() { return $this->changes; }
